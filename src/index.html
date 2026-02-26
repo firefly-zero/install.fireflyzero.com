@@ -42,11 +42,17 @@
           max="100"
           class="progress"
           role="progressbar"
-          style="width: 100%; height: 38px"
+          style="display: none"
         ></progress>
       </form>
     </div>
     <script>
+      htmx.on("#form", "htmx:beforeSend", function (evt) {
+        htmx.find("button").setAttribute("style", "display: none");
+        htmx
+          .find("progress")
+          .setAttribute("style", "display: block; width: 100%; height: 38px");
+      });
       htmx.on("#form", "htmx:xhr:progress", function (evt) {
         htmx
           .find("#progress")
