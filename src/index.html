@@ -23,6 +23,12 @@
           style="display: none"
           role="alert"
         ></div>
+        <div
+          id="success"
+          class="alert alert-success"
+          style="display: none"
+          role="alert"
+        ></div>
 
         <div class="mb-3 row">
           <label for="id" class="col-form-label col-sm-2">Session ID:</label>
@@ -51,11 +57,22 @@
       </form>
     </div>
     <script>
+      function showBox(id) {
+        document.getElementById(id).style.display = "block";
+      }
+
+      function hideBox(id) {
+        document.getElementById(id).style.display = "none";
+      }
+
       function postFile(e) {
         e.preventDefault();
         const file = document.getElementById("file").files[0];
-        var request = new XMLHttpRequest();
-        request.upload.addEventListener("progress", function (e) {
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = "text";
+
+        // Update progress bar.
+        xhr.upload.addEventListener("progress", function (e) {
           var fileSize = document.getElementById("file").files[0].size;
           let progress = Math.round((e.loaded / fileSize) * 100);
           if (progress > 99) {
@@ -64,10 +81,31 @@
           document.getElementById("progress").setAttribute("value", progress);
         });
 
+        // Handle response.
+        xhr.onload = (e) => {
+          if (xhr.readyState !== 4) {
+            return;
+          }
+          hideBox("progress");
+          showBox("button");
+          if (xhr.status === 200) {
+            showBox("success");
+            document.getElementById("success").innerText = "app is uploaded";
+          } else {
+            showBox("alert");
+            const msg = xhr.response || "unknown error";
+            document.getElementById("alert").innerText = msg;
+          }
+        };
+
         const id = document.getElementById("id").value;
         const url = `/upload/${id}`;
-        request.open("post", url);
-        request.send(file);
+        hideBox("alert");
+        hideBox("success");
+        hideBox("button");
+        showBox("progress");
+        xhr.open("post", url);
+        xhr.send(file);
         return false;
       }
     </script>
