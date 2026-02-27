@@ -1,22 +1,51 @@
 package src
 
 import (
+	"context"
 	_ "embed"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 //go:embed index.html
 var rawIndex string
 
-func runWebServer(devices DeviceServer, logger *slog.Logger) {
+type WebServer struct {
+	server *http.Server
+	logger *slog.Logger
+}
+
+func newWebServer(devices DeviceServer, logger *slog.Logger) WebServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", serveIndex)
 	mux.HandleFunc("POST /upload", handleFileUpload(devices, logger))
-	err := http.ListenAndServe(":19742", mux)
+	return WebServer{
+		server: &http.Server{
+			Addr:    ":19742",
+			Handler: mux,
+		},
+		logger: logger,
+	}
+}
+
+func (srv WebServer) run(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		srv.logger.Info("draining HTTP connections...")
+		subCtx, cancel := context.WithTimeout(context.Background(), 18*time.Second)
+		defer cancel()
+		err := srv.server.Shutdown(subCtx)
+		if err != nil {
+			srv.logger.Error("HTTP server shutdown error", "error", err)
+		}
+	}()
+
+	srv.logger.Info("listening for HTTP connections...")
+	err := srv.server.ListenAndServe()
 	if err != http.ErrServerClosed {
-		logger.Error("fatal server error", "error", err)
+		srv.logger.Error("fatal server error", "error", err)
 	}
 }
 

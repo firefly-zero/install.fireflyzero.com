@@ -26,21 +26,31 @@ func newDeviceServer(logger *slog.Logger) DeviceServer {
 }
 
 func (srv DeviceServer) run(ctx context.Context) {
+	srv.logger.Info("listening for TCP connections...")
 	listener, err := net.Listen("tcp", ":19743")
 	if err != nil {
 		srv.logger.Error("failed to start device server", "error", err)
 	}
-	defer listener.Close()
+
+	go func() {
+		<-ctx.Done()
+		srv.logger.Info("draining TCP connections...")
+		err := listener.Close()
+		if err != nil {
+			srv.logger.Error("TCP server shutdown error", "error", err)
+		}
+	}()
+
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
 		conn, err := listener.Accept()
 		if err != nil {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			srv.logger.Warn("failed to accept connection", "error", err)
 		}
 		wg.Add(1)
