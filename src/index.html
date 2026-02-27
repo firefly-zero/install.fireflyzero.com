@@ -12,38 +12,34 @@
     />
   </head>
   <body>
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
     <h1 class="text-center">
       Upload an app to a <a href="https://fireflyzero.com/">Firefly Zero</a> device
     </h1>
     <div class="row">
-      <form
-        id="form"
-        hx-encoding="multipart/form-data"
-        hx-post="/upload"
-        class="col-md-6 offset-md-3"
-      >
+      <form id="form" class="col-md-6 offset-md-3" onsubmit="return postFile(event);">
         <div
           id="alert"
           class="alert alert-danger"
           style="display: none"
           role="alert"
         ></div>
+
         <div class="mb-3 row">
           <label for="id" class="col-form-label col-sm-2">Session ID:</label>
           <div class="col-sm-10">
-            <input type="number" name="id" class="form-control" required />
+            <input id="id" type="number" name="id" class="form-control" required />
           </div>
         </div>
+
         <div class="mb-3 row">
           <label for="file" class="col-form-label col-sm-2">Zip file:</label>
           <div class="col-sm-10">
-            <input type="file" name="file" class="form-control" required />
+            <input id="file" type="file" name="file" class="form-control" required />
           </div>
         </div>
-        <button id="button" class="btn btn-primary" style="width: 100%" type="submit">
-          Upload
-        </button>
+
+        <button id="button" class="btn btn-primary" style="width: 100%">Upload</button>
+
         <progress
           id="progress"
           value="0"
@@ -55,34 +51,25 @@
       </form>
     </div>
     <script>
-      function hideBox(selector) {
-        htmx.find(selector).style.display = "none";
-      }
+      function postFile(e) {
+        e.preventDefault();
+        const file = document.getElementById("file").files[0];
+        var request = new XMLHttpRequest();
+        request.upload.addEventListener("progress", function (e) {
+          var fileSize = document.getElementById("file").files[0].size;
+          let progress = Math.round((e.loaded / fileSize) * 100);
+          if (progress > 99) {
+            progress = 99;
+          }
+          document.getElementById("progress").setAttribute("value", progress);
+        });
 
-      function showBox(selector) {
-        htmx.find(selector).style.display = "block";
+        const id = document.getElementById("id").value;
+        const url = `/upload/${id}`;
+        request.open("post", url);
+        request.send(file);
+        return false;
       }
-
-      htmx.on("#form", "htmx:afterRequest", function (evt) {
-        showBox("#button");
-        hideBox("#progress");
-      });
-      htmx.on("#form", "htmx:beforeSend", function (evt) {
-        hideBox("#button");
-        showBox("#progress");
-      });
-      htmx.on("#form", "htmx:xhr:progress", function (evt) {
-        const progress = (evt.detail.loaded / evt.detail.total) * 100;
-        htmx.find("#progress").setAttribute("value", progress);
-      });
-      htmx.on("#form", "htmx:responseError", function (evt) {
-        showBox("#alert");
-        htmx.find("#alert").innerText = evt.detail.xhr.response;
-      });
-      htmx.on("#form", "htmx:sendError", function (evt) {
-        showBox("#alert");
-        htmx.find("#alert").innerText = "network error";
-      });
     </script>
   </body>
 </html>

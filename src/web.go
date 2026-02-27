@@ -20,7 +20,7 @@ type WebServer struct {
 func newWebServer(devices DeviceServer, logger *slog.Logger) WebServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", serveIndex)
-	mux.HandleFunc("POST /upload", handleFileUpload(devices, logger))
+	mux.HandleFunc("POST /upload/{id}", handleFileUpload(devices, logger))
 	return WebServer{
 		server: &http.Server{
 			Addr:    ":19742",
