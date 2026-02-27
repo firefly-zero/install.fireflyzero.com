@@ -41,7 +41,9 @@
             <input type="file" name="file" class="form-control" required />
           </div>
         </div>
-        <button class="btn btn-primary" style="width: 100%" type="submit">Upload</button>
+        <button id="button" class="btn btn-primary" style="width: 100%" type="submit">
+          Upload
+        </button>
         <progress
           id="progress"
           value="0"
@@ -53,30 +55,32 @@
       </form>
     </div>
     <script>
+      function hideBox(selector) {
+        htmx.find(selector).style.display = "none";
+      }
+      function showBox(selector) {
+        htmx.find(selector).style.display = "block";
+      }
+
       htmx.on("#form", "htmx:afterRequest", function (evt) {
-        htmx.find("button").setAttribute("style", "display: block; width: 100%");
-        htmx.find("progress").setAttribute("style", "display: none");
-      });
-      htmx.on("#form", "htmx:responseError", function (evt) {
-        const alertElement = htmx.find("#alert");
-        alertElement.setAttribute("style", "display: block");
-        alertElement.innerText = evt.detail.xhr.response;
-      });
-      htmx.on("#form", "htmx:sendError", function (evt) {
-        const alertElement = htmx.find("#alert");
-        alertElement.setAttribute("style", "display: block");
-        alertElement.innerText = "network error";
+        showBox("#button");
+        hideBox("#progress");
       });
       htmx.on("#form", "htmx:beforeSend", function (evt) {
-        htmx.find("button").setAttribute("style", "display: none");
-        htmx
-          .find("progress")
-          .setAttribute("style", "display: block; width: 100%; height: 38px");
+        hideBox("#button");
+        showBox("#progress");
       });
       htmx.on("#form", "htmx:xhr:progress", function (evt) {
-        htmx
-          .find("#progress")
-          .setAttribute("value", (evt.detail.loaded / evt.detail.total) * 100);
+        const element = htmx.find("#progress");
+        element.setAttribute("value", (evt.detail.loaded / evt.detail.total) * 100);
+      });
+      htmx.on("#form", "htmx:responseError", function (evt) {
+        showBox("#alert");
+        htmx.find("#alert").innerText = evt.detail.xhr.response;
+      });
+      htmx.on("#form", "htmx:sendError", function (evt) {
+        showBox("#alert");
+        htmx.find("#alert").innerText = "network error";
       });
     </script>
   </body>
