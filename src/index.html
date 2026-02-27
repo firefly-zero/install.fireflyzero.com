@@ -58,6 +58,7 @@
       function hideBox(selector) {
         htmx.find(selector).style.display = "none";
       }
+
       function showBox(selector) {
         htmx.find(selector).style.display = "block";
       }
@@ -71,8 +72,8 @@
         showBox("#progress");
       });
       htmx.on("#form", "htmx:xhr:progress", function (evt) {
-        const element = htmx.find("#progress");
-        element.setAttribute("value", (evt.detail.loaded / evt.detail.total) * 100);
+        const progress = (evt.detail.loaded / evt.detail.total) * 100;
+        htmx.find("#progress").setAttribute("value", progress);
       });
       htmx.on("#form", "htmx:responseError", function (evt) {
         showBox("#alert");
