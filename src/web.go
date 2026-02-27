@@ -63,13 +63,12 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 			return
 		}
 		id := uint32(id64)
-		device, found := devices.getDevice(id)
+		device, found := devices.popDevice(id)
 		if !found {
 			sendError(w, "no connected device with the given session ID")
 			return
 		}
 
-		defer devices.disconnectDevice(id)
 		defer r.Body.Close()
 		err = device.writeFrom(r.Body)
 		if err != nil {

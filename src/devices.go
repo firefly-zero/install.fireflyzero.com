@@ -39,6 +39,11 @@ func (srv DeviceServer) run(ctx context.Context) {
 		if err != nil {
 			srv.logger.Error("TCP server shutdown error", "error", err)
 		}
+		srv.mx.Lock()
+		defer srv.mx.Unlock()
+		for _, device := range srv.devices {
+			close(device.done)
+		}
 	}()
 
 	wg := &sync.WaitGroup{}
@@ -58,17 +63,14 @@ func (srv DeviceServer) run(ctx context.Context) {
 	}
 }
 
-func (srv DeviceServer) getDevice(id uint32) (DeviceConn, bool) {
+func (srv DeviceServer) popDevice(id uint32) (DeviceConn, bool) {
 	srv.mx.Lock()
 	device, found := srv.devices[id]
+	if found {
+		delete(srv.devices, id)
+	}
 	srv.mx.Unlock()
 	return device, found
-}
-
-func (srv DeviceServer) disconnectDevice(id uint32) {
-	srv.mx.Lock()
-	delete(srv.devices, id)
-	srv.mx.Unlock()
 }
 
 func (srv DeviceServer) handleConnection(wg *sync.WaitGroup, conn net.Conn) {
