@@ -17,17 +17,20 @@ type DeviceServer struct {
 	logger  *slog.Logger
 }
 
-func StartDeviceServer(ctx context.Context, logger *slog.Logger) {
-	listener, err := net.Listen("tcp", ":19743")
-	if err != nil {
-		logger.Error("failed to start device server", "error", err)
-	}
-	defer listener.Close()
-	server := DeviceServer{
+func newDeviceServer(logger *slog.Logger) DeviceServer {
+	return DeviceServer{
 		mx:      &sync.Mutex{},
 		devices: map[uint32]DeviceConn{},
 		logger:  logger,
 	}
+}
+
+func (srv DeviceServer) run(ctx context.Context) {
+	listener, err := net.Listen("tcp", ":19743")
+	if err != nil {
+		srv.logger.Error("failed to start device server", "error", err)
+	}
+	defer listener.Close()
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 	for {
@@ -38,27 +41,27 @@ func StartDeviceServer(ctx context.Context, logger *slog.Logger) {
 		}
 		conn, err := listener.Accept()
 		if err != nil {
-			logger.Warn("failed to accept connection", "error", err)
+			srv.logger.Warn("failed to accept connection", "error", err)
 		}
 		wg.Add(1)
-		go server.handleConnection(wg, conn)
+		go srv.handleConnection(wg, conn)
 	}
 }
 
-func (srv *DeviceServer) getDevice(id uint32) (DeviceConn, bool) {
+func (srv DeviceServer) getDevice(id uint32) (DeviceConn, bool) {
 	srv.mx.Lock()
 	device, found := srv.devices[id]
 	srv.mx.Unlock()
 	return device, found
 }
 
-func (srv *DeviceServer) disconnectDevice(id uint32) {
+func (srv DeviceServer) disconnectDevice(id uint32) {
 	srv.mx.Lock()
 	delete(srv.devices, id)
 	srv.mx.Unlock()
 }
 
-func (srv *DeviceServer) handleConnection(wg *sync.WaitGroup, conn net.Conn) {
+func (srv DeviceServer) handleConnection(wg *sync.WaitGroup, conn net.Conn) {
 	defer wg.Done()
 	err := srv.handleConnectionInner(conn)
 	if err != nil {
@@ -66,7 +69,7 @@ func (srv *DeviceServer) handleConnection(wg *sync.WaitGroup, conn net.Conn) {
 	}
 }
 
-func (srv *DeviceServer) handleConnectionInner(conn net.Conn) error {
+func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 	const readTimeout = 10 * time.Minute
 
 	defer conn.Close()

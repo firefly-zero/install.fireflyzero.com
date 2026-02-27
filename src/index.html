@@ -14,7 +14,7 @@
   <body>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
     <h1 class="text-center">
-      Upload app to a <a href="https://fireflyzero.com/">Firefly Zero</a> device
+      Upload an app to a <a href="https://fireflyzero.com/">Firefly Zero</a> device
     </h1>
     <div class="row">
       <form
@@ -47,6 +47,10 @@
       </form>
     </div>
     <script>
+      htmx.on("#form", "htmx:afterRequest", function (evt) {
+        htmx.find("button").setAttribute("style", "display: block; width: 100%");
+        htmx.find("progress").setAttribute("style", "display: none");
+      });
       htmx.on("#form", "htmx:beforeSend", function (evt) {
         htmx.find("button").setAttribute("style", "display: none");
         htmx
