@@ -23,6 +23,12 @@
         hx-post="/upload"
         class="col-md-6 offset-md-3"
       >
+        <div
+          id="alert"
+          class="alert alert-danger"
+          style="display: none"
+          role="alert"
+        ></div>
         <div class="mb-3 row">
           <label for="id" class="col-form-label col-sm-2">Session ID:</label>
           <div class="col-sm-10">
@@ -35,7 +41,7 @@
             <input type="file" name="file" class="form-control" required />
           </div>
         </div>
-        <button class="btn btn-primary" style="width: 100%">Upload</button>
+        <button class="btn btn-primary" style="width: 100%" type="submit">Upload</button>
         <progress
           id="progress"
           value="0"
@@ -50,6 +56,16 @@
       htmx.on("#form", "htmx:afterRequest", function (evt) {
         htmx.find("button").setAttribute("style", "display: block; width: 100%");
         htmx.find("progress").setAttribute("style", "display: none");
+      });
+      htmx.on("#form", "htmx:responseError", function (evt) {
+        const alertElement = htmx.find("#alert");
+        alertElement.setAttribute("style", "display: block");
+        alertElement.innerText = evt.detail.xhr.response;
+      });
+      htmx.on("#form", "htmx:sendError", function (evt) {
+        const alertElement = htmx.find("#alert");
+        alertElement.setAttribute("style", "display: block");
+        alertElement.innerText = "network error";
       });
       htmx.on("#form", "htmx:beforeSend", function (evt) {
         htmx.find("button").setAttribute("style", "display: none");
