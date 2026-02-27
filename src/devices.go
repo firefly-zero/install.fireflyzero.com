@@ -92,16 +92,16 @@ func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 		return fmt.Errorf("set read deadline: %v", err)
 	}
 
-	// Read the device ID.
+	// Read the session ID.
 	buf := make([]byte, 4)
 	_, err = io.ReadFull(conn, buf)
 	if err != nil {
-		return fmt.Errorf("read device ID: %v", err)
+		return fmt.Errorf("read session ID: %v", err)
 	}
+	id := binary.LittleEndian.Uint32(buf)
 
 	// Register the device connection by its ID.
 	done := make(chan struct{})
-	id := binary.LittleEndian.Uint32(buf)
 	srv.mx.Lock()
 	srv.devices[id] = DeviceConn{
 		conn: conn,

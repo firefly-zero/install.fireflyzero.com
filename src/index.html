@@ -98,14 +98,19 @@
           }
         };
 
-        const id = document.getElementById("id").value;
-        const url = `/upload/${id}`;
+        // Prepare the UI.
         hideBox("alert");
         hideBox("success");
         hideBox("button");
         showBox("progress");
+
+        // Send request.
+        const id = document.getElementById("id").value;
+        const url = `/upload/${id}`;
         xhr.open("post", url);
         xhr.send(file);
+
+        // Prevent sending the form.
         return false;
       }
     </script>

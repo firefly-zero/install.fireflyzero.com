@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
@@ -20,10 +21,11 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("dial: %v", err)
 	}
-	id := rand.Uint64()
-	idStr := fmt.Sprintf("%8d", id%100_000_000)
-	fmt.Printf("session ID: %s\n", idStr)
-	_, _ = conn.Write([]byte(idStr))
+	id := rand.Uint32() % 100_000_000
+	fmt.Printf("session ID: %8d\n", id)
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, id)
+	_, _ = conn.Write(buf)
 
 	fmt.Println("waiting for file...")
 	file, err := io.ReadAll(conn)
