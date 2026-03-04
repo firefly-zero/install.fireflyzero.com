@@ -55,6 +55,15 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 
 func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength < 0 {
+			sendError(w, "Content-Length is required")
+			return
+		}
+		if r.ContentLength <= 20 {
+			sendError(w, "the file is too small")
+			return
+		}
+
 		// Find an open device connection by the given ID.
 		rawID := r.PathValue("id")
 		id64, err := strconv.ParseUint(rawID, 10, 32)
@@ -75,7 +84,7 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 		}
 
 		defer r.Body.Close()
-		err = device.writeFrom(r.Body)
+		err = device.writeFrom(r.ContentLength, r.Body)
 		if err != nil {
 			sendError(w, "failed to send file to the device")
 			logger.Warn("send to the device", "error", err)
