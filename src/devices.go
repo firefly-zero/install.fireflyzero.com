@@ -27,7 +27,7 @@ func newDeviceServer(logger *slog.Logger) DeviceServer {
 
 func (srv DeviceServer) run(ctx context.Context) {
 	srv.logger.Info("listening for TCP connections...")
-	listener, err := net.Listen("tcp", ":19743")
+	listener, err := net.Listen("tcp", "0.0.0.0:19743")
 	if err != nil {
 		srv.logger.Error("failed to start device server", "error", err)
 	}
@@ -86,6 +86,7 @@ func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 
 	defer conn.Close()
 
+	srv.logger.Info("new connection, let's go!")
 	now := time.Now()
 	err := conn.SetReadDeadline(now.Add(readTimeout))
 	if err != nil {
@@ -99,6 +100,7 @@ func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 		return fmt.Errorf("read session ID: %v", err)
 	}
 	id := binary.LittleEndian.Uint32(buf)
+	srv.logger.Info("new session", "session_id", id)
 
 	// Register the device connection by its ID.
 	done := make(chan struct{})
@@ -114,5 +116,6 @@ func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 	case <-time.After(10 * time.Minute):
 	case <-done:
 	}
+	srv.logger.Info("disconnected", "session_id", id)
 	return nil
 }
