@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/orsinium-labs/postcard"
 )
 
@@ -24,6 +25,10 @@ type Meta struct {
 	launcher   bool
 	sudo       bool
 	version    uint32
+}
+
+func init() {
+	zip.RegisterDecompressor(93, zstd.ZipDecompressor())
 }
 
 func (m *Meta) parse(r io.Reader) error {
