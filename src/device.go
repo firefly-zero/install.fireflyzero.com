@@ -20,6 +20,7 @@ func (c *DeviceConn) writeROM(rom ROM) error {
 	const writeTimeout = 10 * time.Minute
 
 	defer close(c.done)
+	defer rom.close()
 
 	now := time.Now()
 	err := c.conn.SetWriteDeadline(now.Add(writeTimeout))
@@ -47,6 +48,10 @@ func (c *DeviceConn) writeROM(rom ROM) error {
 
 	// Write body.
 	for _, file := range rom.files {
+		err = c.writeStr(file.Name)
+		if err != nil {
+			return fmt.Errorf("write file name: %v", err)
+		}
 		err := c.writeU32(uint32(file.UncompressedSize64))
 		if err != nil {
 			return fmt.Errorf("write file size: %v", err)
@@ -56,6 +61,7 @@ func (c *DeviceConn) writeROM(rom ROM) error {
 			return fmt.Errorf("open file %s: %v", file.Name, err)
 		}
 		_, err = io.Copy(c.conn, stream)
+		_ = stream.Close()
 		if err != nil {
 			return fmt.Errorf("send file: %v", err)
 		}

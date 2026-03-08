@@ -2,10 +2,12 @@ package src
 
 import (
 	"archive/zip"
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
@@ -51,6 +53,7 @@ type ROM struct {
 	meta Meta
 	// List of files in the archive.
 	files []*zip.File
+	close func()
 }
 
 func readROM(r io.Reader) (ROM, error) {
@@ -59,9 +62,15 @@ func readROM(r io.Reader) (ROM, error) {
 	if err != nil {
 		return ROM{}, fmt.Errorf("create temp file: %w", err)
 	}
-	defer func() {
+	shouldClose := true
+	close := func() {
 		_ = archiveFile.Close()
 		_ = os.Remove(archiveFile.Name())
+	}
+	defer func() {
+		if shouldClose {
+			close()
+		}
 	}()
 
 	// Write the archive into the temporary file and open it.
@@ -116,10 +125,20 @@ func readROM(r io.Reader) (ROM, error) {
 		return ROM{}, fmt.Errorf("only system apps can use sudo: %w", err)
 	}
 
+	// Sort files by name.
+	// The client needs the files sorted so that it can calculate
+	// the ROM hash on the fly.
+	files := archive.File
+	slices.SortStableFunc(files, func(a, b *zip.File) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+
+	shouldClose = false
 	rom := ROM{
 		totalSize: uint32(totalSize),
-		files:     archive.File,
+		files:     files,
 		meta:      meta,
+		close:     close,
 	}
 	return rom, nil
 }

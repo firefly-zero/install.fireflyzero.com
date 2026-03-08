@@ -27,12 +27,41 @@ func run() error {
 	binary.LittleEndian.PutUint32(buf, id)
 	_, _ = conn.Write(buf)
 
-	fmt.Println("waiting for file...")
-	file, err := io.ReadAll(conn)
+	fmt.Println("waiting for ROM...")
+	rom, err := io.ReadAll(conn)
 	if err != nil {
-		return fmt.Errorf("download file: %v", err)
+		return fmt.Errorf("download ROM: %v", err)
 	}
-	fmt.Printf("received %d bytes", len(file))
-
+	printROM(rom)
 	return nil
+}
+
+func printROM(rom []byte) {
+	fmt.Printf("received:         %d bytes\n", len(rom))
+	fmt.Printf("protocol version: %d\n", rom[0])
+	fmt.Printf("body size:    	  %d bytes\n", binary.LittleEndian.Uint32(rom[1:]))
+	rom = rom[5:]
+
+	size := binary.LittleEndian.Uint32(rom)
+	rom = rom[4:]
+	fmt.Printf("author ID:        %s\n", string(rom[:size]))
+	rom = rom[size:]
+
+	size = binary.LittleEndian.Uint32(rom)
+	rom = rom[4:]
+	fmt.Printf("app ID:           %s\n", string(rom[:size]))
+	rom = rom[size:]
+
+	for len(rom) != 0 {
+		size = binary.LittleEndian.Uint32(rom)
+		rom = rom[4:]
+		name := string(rom[:size])
+		rom = rom[size:]
+
+		size = binary.LittleEndian.Uint32(rom)
+		rom = rom[4:]
+		rom = rom[size:]
+
+		fmt.Printf("%s: %d bytes\n", name, size)
+	}
 }
