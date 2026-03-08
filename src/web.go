@@ -63,6 +63,10 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 			sendError(w, "the file is too small")
 			return
 		}
+		if r.ContentLength > 8*mb {
+			sendError(w, "ROM is too big")
+			return
+		}
 
 		// Find an open device connection by the given ID.
 		rawID := r.PathValue("id")
@@ -84,7 +88,14 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 		}
 
 		defer r.Body.Close()
-		err = device.writeFrom(r.ContentLength, r.Body)
+		rom, err := readROM(r.Body)
+		if err != nil {
+			sendError(w, err.Error())
+			logger.Warn("failed to read ROM", "error", err)
+			return
+		}
+
+		err = device.writeROM(rom)
 		if err != nil {
 			sendError(w, "failed to send file to the device")
 			logger.Warn("send to the device", "error", err)

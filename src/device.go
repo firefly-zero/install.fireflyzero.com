@@ -3,7 +3,6 @@ package src
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 	"net"
 	"time"
 )
@@ -13,7 +12,7 @@ type DeviceConn struct {
 	done chan struct{}
 }
 
-func (c *DeviceConn) writeFrom(cl int64, r io.Reader) error {
+func (c *DeviceConn) writeROM(rom ROM) error {
 	const writeTimeout = 10 * time.Minute
 
 	defer close(c.done)
@@ -24,16 +23,21 @@ func (c *DeviceConn) writeFrom(cl int64, r io.Reader) error {
 		return fmt.Errorf("set write deadline: %v", err)
 	}
 
-	buf := make([]uint8, 4)
-	binary.LittleEndian.PutUint32(buf, uint32(max(cl, 0)))
-	_, err = c.conn.Write(buf)
+	_, err = c.conn.Write([]byte{1})
 	if err != nil {
-		return fmt.Errorf("write file size: %v", err)
+		return fmt.Errorf("write protocol version: %v", err)
+	}
+	err = c.writeU32(rom.totalSize)
+	if err != nil {
+		return fmt.Errorf("write ROM size: %v", err)
 	}
 
-	_, err = io.Copy(c.conn, r)
-	if err != nil {
-		return fmt.Errorf("copy file: %v", err)
-	}
 	return nil
+}
+
+func (c *DeviceConn) writeU32(v uint32) error {
+	buf := make([]uint8, 4)
+	binary.LittleEndian.PutUint32(buf, v)
+	_, err := c.conn.Write(buf)
+	return err
 }
