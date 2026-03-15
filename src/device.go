@@ -10,7 +10,7 @@ import (
 
 type DeviceConn struct {
 	conn net.Conn
-	done chan struct{}
+	done chan<- struct{}
 }
 
 // Send the given ROM to the device.
@@ -32,6 +32,10 @@ func (c *DeviceConn) writeROM(rom ROM) error {
 	_, err = c.conn.Write([]byte{1})
 	if err != nil {
 		return fmt.Errorf("write protocol version: %v", err)
+	}
+	err = c.writeU32(formatDate(time.Now()))
+	if err != nil {
+		return fmt.Errorf("write current date: %v", err)
 	}
 	err = c.writeU32(rom.totalSize)
 	if err != nil {
@@ -88,4 +92,9 @@ func (c *DeviceConn) writeU32(v uint32) error {
 	binary.LittleEndian.PutUint32(buf, v)
 	_, err := c.conn.Write(buf)
 	return err
+}
+
+func formatDate(now time.Time) uint32 {
+	y, m, d := now.Date()
+	return uint32(y)<<16 | uint32(m)<<8 | uint32(d)
 }
