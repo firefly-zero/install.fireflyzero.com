@@ -89,6 +89,7 @@ func readROM(r io.Reader) (ROM, error) {
 
 	// Validate sizes and names.
 	var totalSize uint64
+	names := map[string]struct{}{}
 	for _, file := range archive.File {
 		if file.UncompressedSize64 > 8*mb {
 			return ROM{}, fmt.Errorf("file %s is too big", file.Name)
@@ -100,12 +101,25 @@ func readROM(r io.Reader) (ROM, error) {
 			return ROM{}, errors.New("the archive contains a nested file")
 		}
 		totalSize += file.UncompressedSize64
+		names[file.Name] = struct{}{}
 	}
 	if totalSize < 10 {
 		return ROM{}, errors.New("the ROM is empty")
 	}
 	if totalSize > 64*mb {
 		return ROM{}, errors.New("the ROM file is too big")
+	}
+	if _, ok := names["_bin"]; !ok {
+		return ROM{}, errors.New("file not found: _bin")
+	}
+	if _, ok := names["_meta"]; !ok {
+		return ROM{}, errors.New("file not found: _meta")
+	}
+	if _, ok := names["_stats"]; !ok {
+		return ROM{}, errors.New("file not found: _stats")
+	}
+	if _, ok := names["_hash"]; !ok {
+		return ROM{}, errors.New("file not found: _hash")
 	}
 
 	// Parse and validate app metadata.
