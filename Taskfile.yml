@@ -1,0 +1,29 @@
+# https://taskfile.dev
+version: "3"
+
+vars:
+  DOCKER: '{{if eq OS "linux"}}sudo {{end}}docker'
+  COMPOSE: "{{.DOCKER}} compose"
+
+tasks:
+  docker:build:
+    desc: build dev docker image
+    aliases: [build]
+    preconditions:
+      - sh: which docker
+        msg: "please, install docker"
+    cmds:
+      - "{{.COMPOSE}} build --build-arg BUILD_TIME=$ICU_BUILD_TIME {{.CLI_ARGS}}"
+  docker:up:
+    desc: run dev docker containers
+    aliases: [up]
+    cmds:
+      - "{{.COMPOSE}} up {{.CLI_ARGS}}"
+  docker:down:
+    desc: stop dev docker containers
+    aliases: [down]
+    cmds:
+      - "{{.COMPOSE}} down {{.CLI_ARGS}}"
+  docker:push:
+    cmds:
+      - "{{.DOCKER}} save fireflyzero/install:latest | ssh root@116.203.135.82 docker load"

@@ -86,7 +86,6 @@ func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 
 	defer conn.Close()
 
-	srv.logger.Info("new connection, let's go!")
 	now := time.Now()
 	err := conn.SetReadDeadline(now.Add(readTimeout))
 	if err != nil {
@@ -116,6 +115,5 @@ func (srv DeviceServer) handleConnectionInner(conn net.Conn) error {
 	case <-time.After(10 * time.Minute):
 	case <-done:
 	}
-	srv.logger.Info("disconnected", "session_id", id)
 	return nil
 }
