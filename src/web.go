@@ -17,7 +17,7 @@ type WebServer struct {
 	logger *slog.Logger
 }
 
-func newWebServer(devices DeviceServer, logger *slog.Logger) WebServer {
+func newWebServer(devices Devices, logger *slog.Logger) WebServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", serveIndex)
 	mux.HandleFunc("POST /upload/{id}", handleFileUpload(devices, logger))
@@ -60,7 +60,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 // POST /upload/{id}
 //
 // Upload a ROM archive from client to server and then to the connected device.
-func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFunc {
+func handleFileUpload(devices Devices, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength < 0 {
 			sendError(w, "Content-Length is required")
@@ -83,13 +83,8 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 			return
 		}
 		id := uint32(id64)
-		device, found := devices.popDevice(id)
+		device, found := devices.pop(id)
 		if !found {
-			var id2 uint32
-			for id3 := range devices.devices {
-				id2 = id3
-			}
-			println(id, id2)
 			sendError(w, "no connected device with the given session ID")
 			return
 		}
@@ -114,7 +109,7 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 // GET /download/{id}
 //
 // Download file from server to the connected client (device).
-func handleFileDownload(devices DeviceServer, logger *slog.Logger) http.HandlerFunc {
+func handleFileDownload(devices Devices, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawID := r.PathValue("id")
 		id64, err := strconv.ParseUint(rawID, 10, 32)
@@ -130,12 +125,10 @@ func handleFileDownload(devices DeviceServer, logger *slog.Logger) http.HandlerF
 
 		// Register the device connection by its ID.
 		done := make(chan struct{})
-		devices.mx.Lock()
-		devices.devices[id] = DeviceConn{
+		devices.add(id, DeviceConn{
 			w:    w,
 			done: done,
-		}
-		devices.mx.Unlock()
+		})
 
 		// Exit if the connection is used or if it timed out.
 		select {

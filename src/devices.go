@@ -4,24 +4,32 @@ import (
 	"sync"
 )
 
-type DeviceServer struct {
-	mx      *sync.Mutex
-	devices map[uint32]DeviceConn
-}
+type Devices = SyncMap[uint32, DeviceConn]
 
-func newDeviceServer() DeviceServer {
-	return DeviceServer{
-		mx:      &sync.Mutex{},
-		devices: map[uint32]DeviceConn{},
+func newDevices() Devices {
+	return Devices{
+		mx:    &sync.Mutex{},
+		items: map[uint32]DeviceConn{},
 	}
 }
 
-func (srv DeviceServer) popDevice(id uint32) (DeviceConn, bool) {
-	srv.mx.Lock()
-	device, found := srv.devices[id]
+type SyncMap[K comparable, V any] struct {
+	mx    *sync.Mutex
+	items map[K]V
+}
+
+func (m SyncMap[K, V]) add(k K, v V) {
+	m.mx.Lock()
+	m.items[k] = v
+	m.mx.Unlock()
+}
+
+func (m SyncMap[K, V]) pop(k K) (V, bool) {
+	m.mx.Lock()
+	v, found := m.items[k]
 	if found {
-		delete(srv.devices, id)
+		delete(m.items, k)
 	}
-	srv.mx.Unlock()
-	return device, found
+	m.mx.Unlock()
+	return v, found
 }

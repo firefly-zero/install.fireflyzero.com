@@ -10,7 +10,7 @@ func Run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 	logger := newLogger()
-	devices := newDeviceServer()
+	devices := newDevices()
 	web := newWebServer(devices, logger)
 	web.run(ctx)
 	return nil
