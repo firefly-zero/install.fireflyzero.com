@@ -43,9 +43,9 @@ func run() error {
 
 func printROM(headers http.Header, body []byte) {
 	fmt.Println()
-	fmt.Printf("received:         %d bytes\n", len(body))
 	fmt.Printf("protocol version: %s\n", headers.Get("X-F0-Protocol"))
-	fmt.Printf("body size:    	  %s bytes\n", headers.Get("X-F0-Size"))
+	fmt.Printf("body size:        %d bytes\n", len(body))
+	fmt.Printf("content size:     %s bytes\n", headers.Get("X-F0-Size"))
 	fmt.Printf("author ID:        %s\n", headers.Get("X-F0-Author"))
 	fmt.Printf("app ID:           %s\n", headers.Get("X-F0-App"))
 	fmt.Println()

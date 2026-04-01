@@ -28,6 +28,8 @@ func (c *DeviceConn) writeROM(rom ROM) error {
 	headers.Add("X-F0-App", rom.meta.appID)
 	headers.Add("X-F0-Today", time.Now().Format(time.DateOnly))
 	headers.Add("X-F0-Size", strconv.FormatUint(uint64(rom.totalSize), 10))
+	contentLength := calculateContentLenght(rom)
+	headers.Add("Content-Length", strconv.FormatUint(contentLength, 10))
 	c.w.WriteHeader(http.StatusOK)
 
 	// Write body.
@@ -72,4 +74,12 @@ func (c *DeviceConn) writeU32(v uint32) error {
 	binary.LittleEndian.PutUint32(buf, v)
 	_, err := c.w.Write(buf)
 	return err
+}
+
+func calculateContentLenght(rom ROM) uint64 {
+	var cl uint64
+	for _, file := range rom.files {
+		cl += uint64(len(file.Name)) + file.UncompressedSize64 + 8
+	}
+	return cl
 }
