@@ -53,6 +53,7 @@ type ROM struct {
 	meta Meta
 	// List of files in the archive.
 	files []*zip.File
+	// Close archive file descriptor and remove the temporary archive file.
 	close func()
 }
 

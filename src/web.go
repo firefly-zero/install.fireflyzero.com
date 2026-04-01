@@ -21,6 +21,7 @@ func newWebServer(devices DeviceServer, logger *slog.Logger) WebServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", serveIndex)
 	mux.HandleFunc("POST /upload/{id}", handleFileUpload(devices, logger))
+	mux.HandleFunc("GET /download/{id}", handleFileDownload(devices, logger))
 	return WebServer{
 		server: &http.Server{
 			Addr:    ":19742",
@@ -49,10 +50,16 @@ func (srv WebServer) run(ctx context.Context) {
 	}
 }
 
+// GET /
+//
+// Serve the static index page HTML.
 func serveIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(rawIndex))
 }
 
+// POST /upload/{id}
+//
+// Upload a ROM archive from client to server and then to the connected device.
 func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength < 0 {
@@ -100,6 +107,40 @@ func handleFileUpload(devices DeviceServer, logger *slog.Logger) http.HandlerFun
 			sendError(w, "failed to send file to the device")
 			logger.Warn("send to the device", "error", err)
 			return
+		}
+	}
+}
+
+// GET /download/{id}
+//
+// Download file from server to the connected client (device).
+func handleFileDownload(devices DeviceServer, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rawID := r.PathValue("id")
+		id64, err := strconv.ParseUint(rawID, 10, 32)
+		if err != nil {
+			sendError(w, "invalid session ID")
+			return
+		}
+		if id64 >= 100_000_000 {
+			sendError(w, "invalid session ID")
+			return
+		}
+		id := uint32(id64)
+
+		// Register the device connection by its ID.
+		done := make(chan struct{})
+		devices.mx.Lock()
+		devices.devices[id] = DeviceConn{
+			w:    w,
+			done: done,
+		}
+		devices.mx.Unlock()
+
+		// Exit if the connection is used or if it timed out.
+		select {
+		case <-time.After(10 * time.Minute):
+		case <-done:
 		}
 	}
 }

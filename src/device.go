@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"net"
+	"net/http"
+	"strconv"
 	"time"
 )
 
 type DeviceConn struct {
-	conn net.Conn
+	w    http.ResponseWriter
 	done chan<- struct{}
 }
 
@@ -17,46 +18,25 @@ type DeviceConn struct {
 //
 // Only one ROM can be sent in a single connection.
 func (c *DeviceConn) writeROM(rom ROM) error {
-	const writeTimeout = 10 * time.Minute
-
 	defer close(c.done)
 	defer rom.close()
 
-	now := time.Now()
-	err := c.conn.SetWriteDeadline(now.Add(writeTimeout))
-	if err != nil {
-		return fmt.Errorf("set write deadline: %v", err)
-	}
-
-	// Write header.
-	_, err = c.conn.Write([]byte{1})
-	if err != nil {
-		return fmt.Errorf("write protocol version: %v", err)
-	}
-	err = c.writeU32(formatDate(time.Now()))
-	if err != nil {
-		return fmt.Errorf("write current date: %v", err)
-	}
-	err = c.writeU32(rom.totalSize)
-	if err != nil {
-		return fmt.Errorf("write ROM size: %v", err)
-	}
-	err = c.writeStr(rom.meta.authorID)
-	if err != nil {
-		return fmt.Errorf("write author ID: %v", err)
-	}
-	err = c.writeStr(rom.meta.appID)
-	if err != nil {
-		return fmt.Errorf("write app ID: %v", err)
-	}
+	// Write headers.
+	headers := c.w.Header()
+	headers.Add("X-F0-Protocol", "1")
+	headers.Add("X-F0-Author", rom.meta.authorID)
+	headers.Add("X-F0-App", rom.meta.appID)
+	headers.Add("X-F0-Today", time.Now().Format(time.DateOnly))
+	headers.Add("X-F0-Size", strconv.FormatUint(uint64(rom.totalSize), 10))
+	c.w.WriteHeader(http.StatusOK)
 
 	// Write body.
 	for _, file := range rom.files {
-		err = c.writeStr(file.Name)
+		err := c.writeStr(file.Name)
 		if err != nil {
 			return fmt.Errorf("write file name: %v", err)
 		}
-		err := c.writeU32(uint32(file.UncompressedSize64))
+		err = c.writeU32(uint32(file.UncompressedSize64))
 		if err != nil {
 			return fmt.Errorf("write file size: %v", err)
 		}
@@ -64,7 +44,7 @@ func (c *DeviceConn) writeROM(rom ROM) error {
 		if err != nil {
 			return fmt.Errorf("open file %s: %v", file.Name, err)
 		}
-		_, err = io.Copy(c.conn, stream)
+		_, err = io.Copy(c.w, stream)
 		_ = stream.Close()
 		if err != nil {
 			return fmt.Errorf("send file: %v", err)
@@ -83,18 +63,13 @@ func (c *DeviceConn) writeBytes(v []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.conn.Write(v)
+	_, err = c.w.Write(v)
 	return err
 }
 
 func (c *DeviceConn) writeU32(v uint32) error {
 	buf := make([]uint8, 4)
 	binary.LittleEndian.PutUint32(buf, v)
-	_, err := c.conn.Write(buf)
+	_, err := c.w.Write(buf)
 	return err
-}
-
-func formatDate(now time.Time) uint32 {
-	y, m, d := now.Date()
-	return uint32(y)<<16 | uint32(m)<<8 | uint32(d)
 }
