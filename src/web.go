@@ -54,6 +54,9 @@ func (srv WebServer) run(ctx context.Context) {
 //
 // Serve the static index page HTML.
 func serveIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
 	_, _ = w.Write([]byte(rawIndex))
 }
 
