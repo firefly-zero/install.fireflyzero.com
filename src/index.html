@@ -77,6 +77,11 @@
       </form>
     </div>
     <script>
+      const cachedId = localStorage.getItem("sessionId");
+      if (cachedId) {
+        document.getElementById("id").value = cachedId;
+      }
+
       function showBox(id) {
         document.getElementById(id).style.display = "block";
       }
@@ -126,6 +131,7 @@
 
         // Send request.
         const id = document.getElementById("id").value;
+        localStorage.setItem("sessionId", id);
         const url = `/upload/${id}`;
         xhr.open("post", url);
         xhr.send(file);
