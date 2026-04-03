@@ -21,7 +21,7 @@ func newWebServer(devices Devices, logger *slog.Logger) WebServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", serveIndex)
 	mux.HandleFunc("POST /upload/{id}", handleFileUpload(devices, logger))
-	mux.HandleFunc("GET /download/{id}", handleFileDownload(devices, logger))
+	mux.HandleFunc("GET /download/{id}", handleFileDownload(devices))
 	return WebServer{
 		server: &http.Server{
 			Addr:    ":19742",
@@ -112,7 +112,7 @@ func handleFileUpload(devices Devices, logger *slog.Logger) http.HandlerFunc {
 // GET /download/{id}
 //
 // Download file from server to the connected client (device).
-func handleFileDownload(devices Devices, logger *slog.Logger) http.HandlerFunc {
+func handleFileDownload(devices Devices) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawID := r.PathValue("id")
 		id64, err := strconv.ParseUint(rawID, 10, 32)
