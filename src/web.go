@@ -73,7 +73,7 @@ func handleFileUpload(devices Devices, logger *slog.Logger) http.HandlerFunc {
 			sendError(w, "the file is too small")
 			return
 		}
-		if r.ContentLength > 8*mb {
+		if r.ContentLength > 64*mb {
 			sendError(w, "ROM is too big")
 			return
 		}
